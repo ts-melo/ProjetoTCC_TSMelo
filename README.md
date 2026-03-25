@@ -1,6 +1,4 @@
-TCC — UNIFESP ICT  
-Candidata: Thaís Souza de Melo  
-Orientador: Joahannes B. D. da Costa
+
 
 ## Estrutura do projeto
 
@@ -13,7 +11,7 @@ nids/
 │   ├── log_manager.py     ← salva resultados e logs
 │   └── utils/
 │       └── constants.py   ← configurações centrais (paths, hiperparâmetros)
-├── data/                  ← coloque os CSVs do CIC-IDS2017 aqui
+├── data/                  ← CSVs do CIC-IDS2017 
 ├── output/                ← resumo dos experimentos
 ├── log/                   ← resultados detalhados em JSON
 └── requirements.txt
