@@ -1,0 +1,22 @@
+# Dataset (arquivos grandes)
+data/
+
+# Ambiente virtual Python
+venv/
+.venv/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Saídas geradas automaticamente
+output/
+log/
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
