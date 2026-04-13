@@ -41,6 +41,7 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
     tasks.load_flows(X_online, y_online, feature_names=[])
     tasks.generate_arrivals(n_steps)
 
+    
     attack_counts = defaultdict(int)
     step_log = []
 

@@ -6,6 +6,7 @@ from sklearn.metrics import (
     classification_report, confusion_matrix,
     accuracy_score, f1_score, precision_score, recall_score
 )
+from sklearn.neural_network import MLPClassifier
 
 import utils.constants as CONSTANTS
 
@@ -28,6 +29,14 @@ class ModelManager:
                 max_depth=CONSTANTS.RF_MAX_DEPTH,
                 random_state=CONSTANTS.RANDOM_STATE,
                 n_jobs=-1
+            )
+        elif name == 'mlp':
+            return MLPClassifier(
+                hidden_layer_sizes=CONSTANTS.MLP_HIDDEN_LAYERS,
+                max_iter=CONSTANTS.MLP_MAX_ITER,
+                activation=CONSTANTS.MLP_ACTIVATION,
+                random_state=CONSTANTS.RANDOM_STATE,
+                early_stopping=True
             )
         else:
             raise ValueError(f"Unknown model: {name}")

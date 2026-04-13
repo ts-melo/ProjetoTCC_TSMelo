@@ -14,7 +14,7 @@ BENIGN_LABEL    = 'BENIGN'
 TEST_SIZE       = 0.2               
 RANDOM_STATE    = 42
 
-MODELS          = ['decision_tree', 'random_forest']
+MODELS          = ['decision_tree', 'random_forest', 'mlp']
 
 RF_N_ESTIMATORS = 100
 RF_MAX_DEPTH    = None              
@@ -25,4 +25,8 @@ CLASSIFICATION_MODE = 'both'
 
 POISSON_RATE    = 10.0              
 SIM_STEPS       = 100               
+
+MLP_HIDDEN_LAYERS = (100, 50)
+MLP_MAX_ITER = 300
+MLP_ACTIVATION = 'relu'
 
