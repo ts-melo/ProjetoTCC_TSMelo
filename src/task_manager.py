@@ -85,17 +85,6 @@ class TaskManager:
     def peek_pending(self) -> list:
         return list(self.pending_queue)
 
- 
-    def record_result(self, flow_id: str, predicted_label: int, step: int):
-        self.classified[flow_id] = {
-            'predicted_label':  predicted_label,
-            'classified_step':  step,
-        }
-
-    def record_batch(self, flow_ids: list, predictions: np.ndarray, step: int):
-        for fid, pred in zip(flow_ids, predictions):
-            self.record_result(fid, int(pred), step)
-
 
     def stats(self) -> dict:
         return {

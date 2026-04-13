@@ -24,9 +24,11 @@ DT_MAX_DEPTH    = None
 CLASSIFICATION_MODE = 'both'
 
 POISSON_RATE    = 10.0              
-SIM_STEPS       = 100               
+SIM_STEPS       = 5000               
 
 MLP_HIDDEN_LAYERS = (100, 50)
 MLP_MAX_ITER = 300
 MLP_ACTIVATION = 'relu'
+
+ONLINE_MODEL = None #roda todos
 

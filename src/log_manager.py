@@ -10,12 +10,21 @@ def _ensure_dir(path):
     if not os.path.isdir(path):
         os.makedirs(path)
 
+def _model_folder(model_name : str):
+    folder = CONSTANTS.LOG_FOLDER + model_name + "/"
+    _ensure_dir(folder)
+    return folder
 
-def log_results(results: dict, mode: str):
-    
-    _ensure_dir(CONSTANTS.LOG_FOLDER)
+
+def log_results(results: dict, mode: str, model_name: str = None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = CONSTANTS.LOG_FOLDER + f"results_{mode}_{timestamp}.json"
+    if model_name:
+        folder = _model_folder(model_name)
+        filename = folder + f"results_{mode}_{timestamp}.json"
+    else:
+        _ensure_dir(CONSTANTS.LOG_FOLDER)
+        filename = CONSTANTS.LOG_FOLDER + f"results_{mode}_{timestamp}.json"
+    
     with open(filename, 'w') as f:
         json.dump(results, f, indent=4)
     print(f"[LogManager] Results saved → {filename}")

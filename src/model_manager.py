@@ -36,7 +36,8 @@ class ModelManager:
                 max_iter=CONSTANTS.MLP_MAX_ITER,
                 activation=CONSTANTS.MLP_ACTIVATION,
                 random_state=CONSTANTS.RANDOM_STATE,
-                early_stopping=True
+                early_stopping=True,
+                verbose=True
             )
         else:
             raise ValueError(f"Unknown model: {name}")

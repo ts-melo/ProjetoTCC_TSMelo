@@ -8,6 +8,7 @@ from data_manager  import DataManager
 from model_manager import ModelManager
 from task_manager  import TaskManager
 import log_manager
+import time
 
 #training the models
 def run_offline(data, current_mode): 
@@ -33,93 +34,114 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
     print(f"  lambda={rate} flows/step  |  {n_steps} steps")
     print(f"{'='*60}")
 
-    classifier_name = list(models.models.keys())[0]
-    classifier = models.models[classifier_name] #pega o modelo treinado da fase offline para classificar os ataques e benignos
-    print(f"[Main] Classifier for online phase: {classifier_name}")
-
+    print(f"\n[Main] Generating online traffic with Poisson rate λ={rate}")
     tasks = TaskManager(rate=rate, seed=seed)
     tasks.load_flows(X_online, y_online, feature_names=[])
     tasks.generate_arrivals(n_steps)
 
-    
-    attack_counts = defaultdict(int)
-    step_log = []
-
+    # todos os modelos vão ser testados com o mesmo batch
+    batches = []
     for step in range(n_steps):
         arrived = tasks.step()
         batch = tasks.drain_pending()
-        if not batch:
-            continue
+        batches.append((step, arrived, batch))
+    
+    total_flows = sum(len(b) for _, _, b in batches)
+    print(f"\n[Main] {len(batches)} steps - Total flows generated: {total_flows:,}")
+    
+    all_results = {}
 
-        X_batch     = np.array([f['features'] for f in batch]) # + ou - 10 fluxos por step é um lote
-        flow_ids    = [f['flow_id'] for f in batch]
-        true_labels = np.array([f['true_label'] for f in batch])
+    for classifier_name, classifier in models.models.items():
+        print(f"\n{'-'*60}")
+        print(f"\n[Main] Running online simulation with {classifier_name}")
+        print(f"\n{'-'*60}")
 
-        predictions = classifier.predict(X_batch) ## classifica ataques e benignos
+        attack_counts = defaultdict(int)
+        step_log = []
+        sim_start = time.time()
 
-        tasks.record_batch(flow_ids, predictions, step)
+        for step, arrived, batch in batches:
+            if not batch:
+                continue
 
-        n_attacks = 0
-        step_attack_types = defaultdict(int)
-        for pred in predictions: #oq detectou
-            pred_int = int(pred) #converte para inteiro (0 ou 1 no caso binário, ou 0 a n-1 no caso multiclass)
-            if pred_int != 0: # 0 é benigno, então só vai escrever quando detectar um ataque
-                n_attacks += 1
-                if pred_int < len(label_names):
-                    label_str = label_names[pred_int] #converte pro nome do ataque
-                else:
-                    label_str = f"class_{pred_int}"
-                attack_counts[label_str] += 1
-                step_attack_types[label_str] += 1
+            X_batch = np.array([f['features'] for f in batch])
+            flow_ids = [f['flow_id'] for f in batch]
+            true_labels = [f['true_label'] for f in batch]
+            predictions = classifier.predict(X_batch)
+
+            n_attacks = 0
+            step_attack_types = defaultdict(int)
+            for pred in predictions:
+                pred_int = int(pred)
+                if pred_int != 0:  # Assuming 0 = BENIGN
+                    n_attacks += 1
+                    label_str = label_names[pred_int] if pred_int < len(label_names) else f"Class {pred_int}"
+                    step_attack_types[pred_int] += 1
+                    attack_counts[pred_int] += 1
+
+            n_correct = int((predictions == true_labels).sum())
+            step_log.append({
+                'step': step,
+                'arrived': len(arrived),
+                'classified': len(batch),
+                'attacks_detected': n_attacks,
+                'correct': n_correct,
+                'attack_types': dict(step_attack_types),
+            })
+
+            if step % max(1, n_steps // 10) == 0:
+                print(f"  Step {step:3d} - Arrived: {len(arrived):4d} | "
+                      f"Classified: {len(batch):4d} | "
+                      f"Attacks Detected: {n_attacks:4d} |"
+                      f"Correct: {n_correct:4d}")
+                
+        sim_time = round(time.time() - sim_start, 3)
+        total_classified = sum(s['classified'] for s in step_log)
+        total_attacks = sum(s['attacks_detected'] for s in step_log)
+        total_correct = sum(s['correct'] for s in step_log)
+        accuracy = round(total_correct / total_classified, 4) if total_classified else 0
+
+        print(f"\n Total flows classified: {total_classified:,} |"
+              f" Total attacks detected: {total_attacks:,} | "
+              f" Overall accuracy: {accuracy:.4f} |"
+              f" Simulation time: {sim_time}s")
+        
+        if attack_counts:
+            print(f"\n Attack type distribution:")
+            for label, count in sorted(attack_counts.items(), key=lambda x: x[1]):
+                pct = count / total_attacks * 100 if total_attacks else 0
+                print(f"{label:<35} {count:>6,} ({pct:5.1f}%)")
+        else:
+            print("\n No attacks detected in the simulation.")
+
+        all_results[classifier_name] = {
+            'total_classified': total_classified,
+            'total_attacks': total_attacks,
+            'overall_accuracy': accuracy,
+            'simulation_time_s': sim_time,
+            'lambda': rate,
+            'n_steps': n_steps,
+            'attack_counts': dict(attack_counts),
+            'steps': step_log,
+        }
+
+    #tabela
+    print(f"\n{'='*60}")
+    print(f"  ONLINE SIMULATION SUMMARY")
+    print(f"{'='*60}")
+    header = f"{'Model':<35} {'Accuracy':>10} {'Classified':>10} {'Attacks':>10} {'Sim Time(s)':>12}"
+    print(header)
+    print(" " + "─" * (len(header)-2))
+    for name, r in all_results.items():
+        print(f"{name:<35} "
+              f"{r['overall_accuracy']:>10.4f} "
+              f"{r['total_classified']:>10,} "
+              f"{r['total_attacks']:>10,} "
+              f"{r['simulation_time_s']:>12.3f}")
+        print(" " + "─" * (len(header)-2))
+
  
-        n_correct = int((predictions == true_labels).sum())
-        step_log.append({
-            'step':             step,
-            'arrived':          len(arrived),
-            'classified':       len(batch),
-            'attacks_detected': n_attacks,
-            'correct':          n_correct,
-            'attack_types':     dict(step_attack_types),
-        })
-
-        if step % max(1, n_steps // 10) == 0:
-            print(f"  step {step:4d} | arrived: {len(arrived):4d} | "
-                  f"classified: {len(batch):4d} | "
-                  f"attacks: {n_attacks:4d} | "
-                  f"correct: {n_correct:4d}")
-
-    tasks.print_stats()
-
-    total_classified = sum(s['classified'] for s in step_log)
-    total_attacks    = sum(s['attacks_detected'] for s in step_log)
-    total_correct    = sum(s['correct'] for s in step_log)
-    accuracy = round(total_correct / total_classified, 4) if total_classified else 0
-
-    print(f"\n-- Online Simulation Summary ---------------------")
-    print(f"  Total flows classified : {total_classified:,}")
-    print(f"  Attacks detected       : {total_attacks:,}")
-    print(f"  Overall accuracy       : {accuracy:.4f}")
-    print(f"--------------------------------------------------\n")
-
-    if attack_counts:
-        print(f"\n  Attack types detected:")
-        for label, count in sorted(attack_counts.items(), key=lambda x: -x[1]):
-            pct = count / total_attacks * 100 if total_attacks else 0
-            print(f"    {label:<35} {count:>6,}  ({pct:5.1f}%)")
-    else:
-        print(f"\n  No attacks detected in this simulation.")
- 
-    print(f"--------------------------------------------------\n")
- 
-    online_result = {
-        'total_classified': total_classified,
-        'total_attacks':    total_attacks,
-        'overall_accuracy': accuracy,
-        'attack_type_counts': dict(attack_counts),
-        'steps': step_log,
-    }
- 
-    return online_result
+    return all_results
 
 
 def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_steps=None, seed=None):
@@ -166,7 +188,10 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
  
 
         online_result = run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, label_names)
-        log_manager.log_results(online_result, f"{current_mode}_online")
+        
+        for model_name, model_result in online_result.items():
+            log_manager.log_results(model_result, f"{current_mode}_online", model_name=model_name)
+    
  
     print("\n✓ Pipeline complete.\n")
 
