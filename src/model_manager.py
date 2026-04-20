@@ -14,8 +14,8 @@ import utils.constants as CONSTANTS
 class ModelManager:
 
     def __init__(self):
-        self.models     = {}
         self.results    = {}
+        self.models     = {}
 
     def _build_model(self, name):
         if name == 'decision_tree':
@@ -55,9 +55,15 @@ class ModelManager:
         print(f"[ModelManager] {name} trained in {elapsed}s")
         return model
 
-    def train_all(self, X_train, y_train):
-        for name in CONSTANTS.MODELS:
+    def train_all(self, X_train, y_train, only=None):
+        if only is None:
+            selected = CONSTANTS.MODELS
+        else:
+            selected = [only] 
+        
+        for name in selected:
             self.train(name, X_train, y_train)
+            
         return self
 
     def evaluate(self, name, X_test, y_test, mode='binary', label_names=None):

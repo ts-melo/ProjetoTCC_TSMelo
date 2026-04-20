@@ -11,9 +11,11 @@ import log_manager
 import time
 
 #training the models
-def run_offline(data, current_mode): 
+def run_offline(data, current_mode, choice_model=None): 
     print(f"\n{'='*60}")
     print(f"  OFFLINE TRAINING — {current_mode.upper()}")
+    if choice_model:
+        print(f"  Selected model: {choice_model}")
     print(f"{'='*60}")
 
     data.prepare(mode=current_mode)
@@ -21,18 +23,26 @@ def run_offline(data, current_mode):
     label_names = data.label_names() if current_mode == 'multiclass' else ['BENIGN', 'ATTACK']
 
     models = ModelManager()
-    models.train_all(X_train, y_train)
+    models.train_all(X_train, y_train, only = choice_model)
+
     models.evaluate_all(X_test, y_test, mode=current_mode, label_names=label_names)
-    models.compare()
+    if len(models.models) > 1:
+        models.compare()
 
     return models, X_test, y_test, label_names
 
-def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, label_names):
+def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, label_names, choice_model=None):
 
     print(f"\n{'='*60}")
     print(f"  ONLINE SIMULATION — {current_mode.upper()}")
     print(f"  lambda={rate} flows/step  |  {n_steps} steps")
     print(f"{'='*60}")
+
+    models_to_run = {
+        name: clf for name, clf in models.models.items()
+        if choice_model is None or name == choice_model
+    }
+    print(f"\n[Main] Models selected for online simulation: {', '.join(models_to_run.keys())}")
 
     print(f"\n[Main] Generating online traffic with Poisson rate λ={rate}")
     tasks = TaskManager(rate=rate, seed=seed)
@@ -51,7 +61,7 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
     
     all_results = {}
 
-    for classifier_name, classifier in models.models.items():
+    for classifier_name, classifier in models_to_run.items():
         print(f"\n{'-'*60}")
         print(f"\n[Main] Running online simulation with {classifier_name}")
         print(f"\n{'-'*60}")
@@ -144,19 +154,21 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
     return all_results
 
 
-def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_steps=None, seed=None):
+def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_steps=None, seed=None, choice_model=None):
 
     mode    = mode    or CONSTANTS.CLASSIFICATION_MODE
     rate    = rate    or CONSTANTS.POISSON_RATE
     n_steps = n_steps or CONSTANTS.SIM_STEPS
     seed    = seed    or CONSTANTS.RANDOM_STATE
     online_dataset_path = online_dataset_path or CONSTANTS.ONLINE_DATASET_FILE
+    choice_model = choice_model or CONSTANTS.ONLINE_MODEL
     modes   = ['binary', 'multiclass'] if mode == 'both' else [mode]
 
     data = DataManager()
     data.load(dataset_path)
     data.clean()
     data.summary()
+
     if online_dataset_path:
         print(f"\n[Main] Online simulation dataset: {online_dataset_path}")
         online_data = DataManager()
@@ -169,7 +181,7 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
 
     for current_mode in modes:
 
-        models, X_test, y_test, label_names = run_offline(data, current_mode)
+        models, X_test, y_test, label_names = run_offline(data, current_mode, choice_model)
         log_manager.log_results(models.get_results(), current_mode)
         log_manager.log_summary(models.get_results(), current_mode)
 
@@ -187,7 +199,7 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
             X_online, y_online = X_test, y_test
  
 
-        online_result = run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, label_names)
+        online_result = run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, label_names, choice_model=choice_model)
         
         for model_name, model_result in online_result.items():
             log_manager.log_results(model_result, f"{current_mode}_online", model_name=model_name)
@@ -205,6 +217,10 @@ if __name__ == '__main__':
                         help='Separate CSV for the online simulation phase '
                              '(e.g. a single day). If omitted, uses the test '
                              'split from --dataset.')
+    parser.add_argument('--model', type=str, default=None,
+                        dest='choice_model',
+                        choices=['decision_tree', 'random_forest', 'mlp'],
+                        help='Model to train and use in online phase. If omitted, runs all.')
     parser.add_argument('--mode',    type=str,   default=None,
                         choices=['binary', 'multiclass', 'both'])
     parser.add_argument('--rate',    type=float, default=None,
@@ -221,4 +237,5 @@ if __name__ == '__main__':
         rate=args.rate,
         n_steps=args.steps,
         seed=args.seed,
+        choice_model=args.choice_model
     )
