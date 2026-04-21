@@ -12,8 +12,11 @@ nids/
 │   └── utils/
 │       └── constants.py   ← configurações centrais (paths, hiperparâmetros)
 ├── data/                  ← CSVs do CIC-IDS2017 
-├── output/                ← resumo dos experimentos
-├── log/                   ← resultados detalhados em JSON
+├── output/                ← resumo dos experimentos com as metricas finais
+├── log/                   ← resultados detalhados em JSON, para cada modelo
+│   └── decision_tree/
+│   └── random_forest/
+│   └── mlp/
 └── requirements.txt
 ```
 
@@ -24,10 +27,18 @@ nids/
 pip install -r requirements.txt
 ```
 
-### 2. Configurar o dataset
+### 2. Configurar o dataset para o modo offline
 Edite `src/utils/constants.py` e aponte `DATASET_FILE` para o seu CSV:
 ```python
 DATASET_FILE = 'data/merged_dataset.csv'
+# ou um dia específico:
+DATASET_FILE = 'data/Friday-WorkingHours.pcap_ISCX.csv'
+```
+
+### 2. Configurar o dataset para o modo online
+Edite `src/utils/constants.py` e aponte `ONLINE_DATASET_FILE` para o seu CSV:
+```python
+ONLINE_DATASET_FILE = 'data/merged_dataset.csv'
 # ou um dia específico:
 DATASET_FILE = 'data/Friday-WorkingHours.pcap_ISCX.csv'
 ```
@@ -48,6 +59,9 @@ python main.py --mode multiclass
 
 # Especificar dataset direto na linha de comando
 python main.py --dataset ../data/Friday-WorkingHours.pcap_ISCX.csv --mode both
+
+# Especificar qual modelo (padrão todos)
+python main.py --model decision_tree
 ```
 
 ## Modelos implementados
@@ -56,11 +70,12 @@ python main.py --dataset ../data/Friday-WorkingHours.pcap_ISCX.csv --mode both
 |---|---|
 | Decision Tree | `model_manager.py` |
 | Random Forest | `model_manager.py` |
+| Multilayer Perceptron | `model_manager.py` |
 
 ## Métricas avaliadas
 
-- Acurácia balanceada
+- Acurácia
 - Precisão
-- Recall (sensibilidade)
+- Recall
 - F1-Score
 - Tempo de inferência
