@@ -59,6 +59,7 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
     total_flows = sum(len(b) for _, _, b in batches)
     print(f"\n[Main] {len(batches)} steps - Total flows generated: {total_flows:,}")
     
+
     all_results = {}
 
     for classifier_name, classifier in models_to_run.items():
@@ -69,6 +70,8 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
         attack_counts = defaultdict(int)
         step_log = []
         sim_start = time.time()
+        cum_correct = 0
+        cum_total = 0
 
         for step, arrived, batch in batches:
             if not batch:
@@ -90,6 +93,9 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
                     attack_counts[pred_int] += 1
 
             n_correct = int((predictions == true_labels).sum())
+            cum_correct += n_correct
+            cum_total += len(batch)
+            acc = cum_correct / cum_total if cum_total else 0
             step_log.append({
                 'step': step,
                 'arrived': len(arrived),
@@ -97,6 +103,8 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
                 'attacks_detected': n_attacks,
                 'correct': n_correct,
                 'attack_types': dict(step_attack_types),
+                'accuracy': acc,
+                'cpu_time' : time.time() - sim_start
             })
 
             if step % max(1, n_steps // 10) == 0:
@@ -205,7 +213,8 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
             log_manager.log_results(model_result, f"{current_mode}_online", model_name=model_name)
     
  
-    print("\n✓ Pipeline complete.\n")
+    print("\n Pipeline complete.\n")
+    return online_result
 
 
 if __name__ == '__main__':
