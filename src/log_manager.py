@@ -23,7 +23,7 @@ def log_results(results: dict, mode: str, model_name: str = None):
         filename = folder + f"results_{mode}_{timestamp}.json"
     else:
         _ensure_dir(CONSTANTS.LOG_FOLDER)
-        filename = CONSTANTS.LOG_FOLDER + f"results_{mode}_{timestamp}.json"
+        filename = CONSTANTS.LOG_FOLDER + f"results_{model_name}_{mode}_{timestamp}.json"
     
     with open(filename, 'w') as f:
         json.dump(results, f, indent=4)

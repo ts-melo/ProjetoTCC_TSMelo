@@ -35,8 +35,11 @@ class TaskManager:
                 'classified_step': None,
                 'predicted_label': None,
             })
+        self.rng.shuffle(self.flow_pool)
         self.pool_index = 0
-        print(f"[TaskManager] Flow pool ready — {len(self.flow_pool):,} flows")
+        n_attacks = sum(1 for f in self.flow_pool if f['true_label'] !=0)
+        print(f"[TaskManager] Flow pool ready — {len(self.flow_pool):,} flows"
+              f"({n_attacks:,} attacks, {len(self.flow_pool)-n_attacks:,} benign) — shuffled")
 
     def generate_arrivals(self, n_steps: int):
 
@@ -51,7 +54,7 @@ class TaskManager:
               f"avg/step={total/n_steps:.1f}")
 
         if total > len(self.flow_pool):
-            print(f"  ⚠ Expected arrivals ({total:,}) exceed pool size "
+            print(f"Expected arrivals ({total:,}) exceed pool size "
                   f"({len(self.flow_pool):,}). Pool will cycle.")
 
     def step(self) -> list:

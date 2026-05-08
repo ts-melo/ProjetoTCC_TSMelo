@@ -70,8 +70,7 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
         attack_counts = defaultdict(int)
         step_log = []
         sim_start = time.time()
-        cum_correct = 0
-        cum_total = 0
+
 
         for step, arrived, batch in batches:
             if not batch:
@@ -86,16 +85,13 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
             step_attack_types = defaultdict(int)
             for pred in predictions:
                 pred_int = int(pred)
-                if pred_int != 0:  # Assuming 0 = BENIGN
+                if pred_int != 0:  
                     n_attacks += 1
                     label_str = label_names[pred_int] if pred_int < len(label_names) else f"Class {pred_int}"
                     step_attack_types[pred_int] += 1
-                    attack_counts[pred_int] += 1
+                    attack_counts[label_str] += 1
 
             n_correct = int((predictions == true_labels).sum())
-            cum_correct += n_correct
-            cum_total += len(batch)
-            acc = cum_correct / cum_total if cum_total else 0
             step_log.append({
                 'step': step,
                 'arrived': len(arrived),
@@ -103,7 +99,6 @@ def run_online(models, X_online, y_online, rate, n_steps, seed, current_mode, la
                 'attacks_detected': n_attacks,
                 'correct': n_correct,
                 'attack_types': dict(step_attack_types),
-                'accuracy': acc,
                 'cpu_time' : time.time() - sim_start
             })
 
@@ -214,7 +209,7 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
     
  
     print("\n Pipeline complete.\n")
-    return online_result
+
 
 
 if __name__ == '__main__':
