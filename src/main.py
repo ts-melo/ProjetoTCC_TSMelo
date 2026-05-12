@@ -188,6 +188,7 @@ def run(dataset_path=None, online_dataset_path=None, mode=None, rate=None, n_ste
         log_manager.log_results(models.get_results(), current_mode)
         log_manager.log_summary(models.get_results(), current_mode)
 
+        models.save_all(current_mode)  # Save models after training and evaluation
         if online_data is not None:
             print(f"\n[Main] Preparing online dataset with training scaler...")
             label_col = 'Label'

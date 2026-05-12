@@ -1,5 +1,7 @@
 import time
 import numpy as np
+import joblib
+import os
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
@@ -41,6 +43,35 @@ class ModelManager:
             )
         else:
             raise ValueError(f"Unknown model: {name}")
+        
+    def _model_path(self, name, mode):
+        os.makedirs(CONSTANTS.MODELS_FOLDER, exist_ok=True)
+        return CONSTANTS.MODELS_FOLDER + f"{name}_{mode}.pkl"
+    
+    def save(self, name, mode):
+        if name not in self.models:
+            print(f"[ModelManager] No model named '{name}' trained.")
+            return
+        path = self._model_path(name, mode)
+        joblib.dump(self.models[name], path)
+        print(f"[ModelManager] Saved {name} to {path}")
+    
+    def save_all(self, mode):
+        for name in self.models:
+            self.save(name, mode)
+    
+    def loaf(self, name, mode):
+        path = self._model_path(name, mode)
+        if not os.path.exists(path):
+            print(f"[ModelManager] No saved model at {path}")
+            return False
+        self.models[name] = joblib.load(path)
+        print(f"[ModelManager] Loaded {name} from {path}")
+        return True
+    
+    def load_all(self, mode):
+        loaded = [self.loaf(name, mode) for name in CONSTANTS.MODELS]
+        return all(loaded)
 
     def train(self, name, X_train, y_train):
 
@@ -75,9 +106,11 @@ class ModelManager:
 
         metrics = {
             'accuracy':         round(accuracy_score(y_test, y_pred), 4),
-            'precision':        round(precision_score(y_test, y_pred, average=avg, zero_division=0), 4),
-            'recall':           round(recall_score(y_test, y_pred, average=avg, zero_division=0), 4),
-            'f1_score':         round(f1_score(y_test, y_pred, average=avg, zero_division=0), 4),
+            'precision':        round(precision_score(y_test, y_pred, average=avg,     zero_division=0), 4),
+            'recall':           round(recall_score(y_test, y_pred,    average=avg,     zero_division=0), 4),
+            'f1_weighted':      round(f1_score(y_test, y_pred,        average='weighted', zero_division=0), 4),
+            'f1_macro':         round(f1_score(y_test, y_pred,        average='macro',    zero_division=0), 4),
+            'f1_micro':         round(f1_score(y_test, y_pred,        average='micro',    zero_division=0), 4),
             'inference_time_s': inference_time,
             'confusion_matrix': confusion_matrix(y_test, y_pred).tolist(),
         }
@@ -117,7 +150,9 @@ class ModelManager:
                 f"{m['accuracy']:>9.4f} "
                 f"{m['precision']:>10.4f} "
                 f"{m['recall']:>8.4f} "
-                f"{m['f1_score']:>8.4f} "
+                f"{m['f1_weighted']:>8.4f} "
+                f"{m['f1_macro']:>9.4f} "
+                f"{m['f1_micro']:>9.4f} "
                 f"{m['inference_time_s']:>13.4f}"
             )
         print("─" * len(header))

@@ -41,7 +41,9 @@ def log_summary(results: dict, mode: str):
             line = (
                 f"  {model_key:<35} "
                 f"acc={metrics['accuracy']:.4f}  "
-                f"f1={metrics['f1_score']:.4f}  "
+                f"{metrics['f1_weighted']:>8.4f} "
+                f"{metrics['f1_macro']:>9.4f} "
+                f"{metrics['f1_micro']:>9.4f} "
                 f"recall={metrics['recall']:.4f}  "
                 f"inference={metrics['inference_time_s']:.4f}s\n"
             )
